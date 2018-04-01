@@ -13,6 +13,10 @@ classdef RBF
         WeightCoeff
     end
     
+    %varargin(1) - BaseFunctionName
+    %varargin(2) - Constant
+    %varargin(3) - Smooth
+    %varargin(4) - DerivValues
     methods (Access = public)
         function obj = RBF(x, y, varargin)
             obj.Nodes = x;
@@ -21,8 +25,12 @@ classdef RBF
             obj = obj.ParseVarargin(varargin)
             obj = obj.SetBaseFunction();
             
-            A = obj.Assemble();
-            obj.WeightCoeff =  A\y';
+            %A = obj.Assemble();
+            
+            A = obj.AssembleGrad();
+            y = obj.AddDerivatives(y);
+            
+            obj.WeightCoeff =  A\y;
         end
         
         function [f] = Interpolate(obj, x)
@@ -42,6 +50,7 @@ classdef RBF
     methods (Access = private)
         function obj = ParseVarargin(obj,varargin)
             [XDim, XCount] = size(obj.Nodes);
+            varargin = varargin{1};
             if length(varargin) > 0
                 obj.BaseFunctionName = varargin{1};
             else
@@ -63,22 +72,37 @@ classdef RBF
                 obj.DerivValues   = [];
             end
         end
+        
+        function y = AddDerivatives(obj,y)
+            [n, dim] = size(obj.DerivValues);
+            for i = 1:dim;
+                y = [y ;obj.DerivValues(:,i)];  
+            end
+        end
+        
         function obj = SetBaseFunction(obj)
-            switch lower(obj.BaseFunctionName{1})
+            switch lower(obj.BaseFunctionName)
                   case 'linear'          
                     obj.BaseFunction   = @obj.rbfphi_linear;
+                    obj.BaseFunctionDeriv = @obj.rbfphi_linear_deriv;
                   case 'cubic'
                     obj.BaseFunction   = @obj.rbfphi_cubic;
+                    obj.BaseFunctionDeriv =  @obj.rbfphi_cubic_deriv;
                   case 'multiquadric'
                     obj.BaseFunction   = @obj.rbfphi_multiquadrics;
+                    obj.BaseFunctionDeriv = @obj.rbfphi_multiquadrics_deriv;
                   case 'thinplate'
                     obj.BaseFunction   = @obj.rbfphi_thinplate;
+                    obj.BaseFunctionDeriv =  @obj.rbfphi_thinplate_deriv;
                   case 'gaussian'
                     obj.BaseFunction   = @obj.rbfphi_gaussian;
+                    obj.BaseFunctionDeriv = @obj.rbfphi_gaussian_deriv;
                   case 'cubicspline'
-                    obj.BaseFunction   = @obj.rbfphi_cubicspline; 
+                    obj.BaseFunction   = @obj.rbfphi_cubicspline;
+                    obj.BaseFunctionDeriv = @obj.rbfphi_cubicspline_deriv;
                 otherwise
                     obj.BaseFunction   = @obj.rbfphi_linear;
+                    obj.BaseFunctionDeriv =  @obj.rbfphi_linear_deriv;
             end
         end
         
@@ -95,21 +119,45 @@ classdef RBF
                 A(i,i) = A(i,i) - obj.Smooth;
             end
         end
-        function [A] = AssembleGrad()
+        
+        function [A] = AssembleGrad(obj)
            [dim, n] = size(obj.Nodes);
-            A = zeros(n, n*(dim+1));
+            A = zeros(n*(dim+1),n);
             for i = 1:n
                 for j = 1:i
                     distant = norm(obj.Nodes(:,i) - obj.Nodes(:,j));
                     temp = feval(obj.BaseFunction, distant, obj.Constant);
                     A(i,j) = temp;
                     A(j,i) = temp;
+                    deriv =  obj.rbfphi_deriv(obj.Nodes(:,i), obj.Nodes(:,j));
+                    for k = 1: dim
+                            A(i+k*n,j) = obj.BaseFunctionDeriv(deriv(k),obj.Constant);
+                            A(j+k*n,i) = A(i+k*n,j);
+                    end
                 end
                 A(i,i) = A(i,i) - obj.Smooth;
             end
-            for k = 1:dim
-                
+          
+        end
+        
+        function [A] = AssembleGrad(obj)
+           [dim, n] = size(obj.Nodes);
+            A = zeros(n*(dim+1),n);
+            for i = 1:n
+                for j = 1:i
+                    distant = norm(obj.Nodes(:,i) - obj.Nodes(:,j));
+                    temp = feval(obj.BaseFunction, distant, obj.Constant);
+                    A(i,j) = temp;
+                    A(j,i) = temp;
+                    deriv =  obj.rbfphi_deriv(obj.Nodes(:,i), obj.Nodes(:,j));
+                    for k = 1: dim
+                            A(i+k*n,j) = obj.BaseFunctionDeriv(deriv(k),obj.Constant);
+                            A(j+k*n,i) = A(i+k*n,j);
+                    end
+                end
+                A(i,i) = A(i,i) - obj.Smooth;
             end
+          
         end
         
         %**************************************************************************
@@ -129,16 +177,24 @@ classdef RBF
             u= (r.*r + const*const).^(3/2);end
         
         % Radial Base Functions Derivatives
-        function u=rbfphi_deriv(obj, r, const)
-            u=r; end
+        function deriv =rbfphi_deriv(obj, xFixed, x)
+            deriv = ones(size(x,1));
+            norm = distant(x, xFixed);
+            for j= 1:size(x,1)
+                defiv(j) = (x(j) - xFixed(j))/norm;
+            end
+        end
+        
+        function u=rbfphi_linear_deriv(obj, r, const)
+            u=1; end
         function u=rbfphi_cubic_deriv(obj, r, const)
-            u=r.*r.*r;end
+            u = 2*r.*r;end
         function u=rbfphi_gaussian_deriv(obj, r, const)
-            u=exp(-0.5*r.*r/(const*const));end
+            u = exp(-0.5*r.*r/(const*const));end
         function u=rbfphi_multiquadrics_deriv(obj, r, const)
             u=sqrt(1+r.*r/(const*const));end
         function u=rbfphi_thinplate_deriv(obj, r, const)
-            u=r.*r.*log(r+1);end
+            u = r.*r.*log(r+1);end
         function u=rbfphi_cubicspline_deriv(obj, r, const)
             u= (r.*r + const*const).^(3/2);end
     end
