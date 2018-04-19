@@ -10,11 +10,11 @@ classdef Rozenbrock
         end
         
         function z = Func(obj,x)
-            z = 100*(x(1,:) - x(2,:).^2).^2 + (1-x(1,:)).^2; 
+            z = 100*(x(2,:) - x(1,:).^2).^2 + (1-x(1,:)).^2; 
         end
         
         function z = FuncMesh(obj,x,y)
-            z = 100*(x - y.^2).^2 + (1-x).^2; 
+            z = 100*(y - x.^2).^2 + (1-x).^2; 
         end
         
         function z = Deriv(obj,x)

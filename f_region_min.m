@@ -1,5 +1,5 @@
 function [ x_min_interp, f_x_min_interp, varargout] = f_region_min( fun, x0, lb0, ub0 )
-global dim d eps node_count k funccount;
+global dim d eps node_count k funccount x_min_interp x_min_interp_prev ;
 d =  max( (ub0 - lb0)/5);   dim = size(x0,2);   
 node_count = 10;    eps = 0.0001;   k = 0;  funccount = node_count + 1;
 
@@ -9,12 +9,12 @@ lb = x_min_interp' - d*ones(1,dim);
 ub = x_min_interp' + d*ones(1,dim);
 
 %початкові точки експерименту    
-[lb, ub] = bouns(x_min_interp, lb, ub, lb0, ub0) ;  
+[lb, ub] = bounds(x_min_interp, lb, ub, lb0, ub0) ;  
 x = lg_design(lb, ub, node_count);
 
 %початкові значення 
 for j = 1:node_count
-    z(j) = fun([x(j,:)]);
+    z(j) = fun(x(j,:)');
 end
 
 dg = inf;
@@ -25,7 +25,7 @@ while( dg > eps)
 
     %задання меж області
     lb_prev = lb;   ub_prev = ub;
-    [lb, ub] = bouns(x_min_interp, lb, ub, lb0, ub0);
+    [lb, ub] = bounds(x_min_interp, lb, ub, lb0, ub0);
 
     %вибір наступних точок
     x_prev = x; z_prev = z;
@@ -61,11 +61,11 @@ end
 
 function [ x_min_interp, f_x_min_interp] = f_sub_region_min( x0, X, Z, lb, ub)
     %побудова RBF
-    op = rbf_create(X', Z','RBFFunction', 'thinplate');
+    rbf = RBF(X', Z, 'thinplate'); 
     min_opt = optimset('Display','off');
     
     %знаходження мінімуму інтепполюючої функції
-    [x_min_interp, f_x_min_interp] = fmincon(@rbf_interp, x0',[],[],[],[], lb,ub,[], min_opt, op);
+    [x_min_interp, f_x_min_interp] = fmincon(@rbf.Interpolate, x0',[],[],[],[], lb,ub,[], min_opt);
 end
 
 %обрізання області, якщо межі виходять за початкові
@@ -84,7 +84,7 @@ end;
 end
 
 %обрахування меж області навколо точки
-function [lb, ub] = bouns(x_min_interp, lb, ub, lb0, ub0)
+function [lb, ub] = bounds(x_min_interp, lb, ub, lb0, ub0)
 global d dim;
     lb = x_min_interp' - d*ones(1,dim);
     ub = x_min_interp' + d*ones(1,dim);
@@ -144,7 +144,7 @@ for l = 1:size(x_prev,1)
     if(take_xdesigm == 1)
         count = count + 1;
         x(count,:) = x_prob(l,:);
-        z(count) = fun([x_prob(l,:)]);
+        z(count) = fun(x_prob(l,:)');
         funccount = funccount+1;
             %plot(x(count,1), x(count,2), '.b'); hold on
     end
@@ -155,7 +155,7 @@ if(norm(x_min_interp - x_min_interp_prev) < 0.05)
     for l = 1:size(x_prob)
         count = count+1;
         x(count,:) = x_prob(l,:);
-        z(count) = fun([x_prob(l,:)]);
+        z(count) = fun(x_prob(l,:)');
         funccount = funccount+1;
             %plot(x(count,1), x(count,2), '.b'); hold on
     end
@@ -166,7 +166,7 @@ if(count < node_count)
     for l = 1:size(x_prob)
         count = count+1;
         x(count,:) = x_prob(l,:);
-        z(count) = fun([x_prob(l,:)]);
+        z(count) = fun(x_prob(l,:)');
         funccount = funccount+1;
             %plot(x(count,1), x(count,2), '.b'); hold on
     end
