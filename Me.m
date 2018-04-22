@@ -1,5 +1,5 @@
-function [ x_min_interp, f_x_min_interp, varargout] = f_region_min( fun, x0, lb0, ub0 )
-global dim d eps node_count k funccount x_min_interp x_min_interp_prev ;
+function [ x_min_interp, f_x_min_interp] = f_region_min( fun, x0, lb0, ub0 )
+global dim d eps node_count k funccount  x_min_interp_prev ;
 d =  max( (ub0 - lb0)/5);   dim = size(x0,2);   
 node_count = 10;    eps = 0.0001;   k = 0;  funccount = node_count + 1;
 
@@ -9,7 +9,7 @@ lb = x_min_interp' - d*ones(1,dim);
 ub = x_min_interp' + d*ones(1,dim);
 
 %початкові точки експерименту    
-[lb, ub] = bounds(x_min_interp, lb, ub, lb0, ub0) ;  
+[lb, ub] = bounds(x_min_interp, lb0, ub0) ;  
 x = lg_design(lb, ub, node_count);
 
 %початкові значення 
@@ -70,21 +70,21 @@ end
 
 %обрізання області, якщо межі виходять за початкові
 function [lb, ub, bound_size] = correct_bouns(lb, ub, lb0, ub0)
-global dim;    
-for l=1:dim
-    if(lb(l) < lb0(l))
-        lb(l) = lb0(l);
-    end
-    if(ub(l) > ub0(l))
-        ub(l) = ub0(l);
-    end
-    b = size([lb(l):0.01:ub(l)]');
-    bound_size(l) = b(1);
-end;
+    global dim;    
+    for l=1:dim
+        if(lb(l) < lb0(l))
+            lb(l) = lb0(l);
+        end
+        if(ub(l) > ub0(l))
+            ub(l) = ub0(l);
+        end
+        b = size([lb(l):0.01:ub(l)]');
+        bound_size(l) = b(1);
+    end;
 end
 
 %обрахування меж області навколо точки
-function [lb, ub] = bounds(x_min_interp, lb, ub, lb0, ub0)
+function [lb, ub] = bounds(x_min_interp, lb0, ub0)
 global d dim;
     lb = x_min_interp' - d*ones(1,dim);
     ub = x_min_interp' + d*ones(1,dim);
@@ -100,12 +100,12 @@ global d dim;
 end
 
 %план ескперименту і переведення (0,1)->(a,b)
-function x_prob = lg_design(lb, ub, node_count)
+function x = lg_design(lb, ub, node_count)
 global dim; 
-     x_design = lhsdesign(node_count,dim);
+    x_design = lhsdesign(node_count,dim);
     for j = 1:node_count
         for p = 1:dim
-            x_prob(j,p) = lb(p) + (ub(p)-lb(p))* x_design(j,p);
+            x(j,p) = lb(p) + (ub(p)-lb(p))* x_design(j,p);
         end
     end
 end

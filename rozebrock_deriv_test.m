@@ -25,14 +25,14 @@ subplot(1,3,1); mesh(X,Y,F); title('Real'); hold on;
 % plot3(x_minr(1),x_minr(2),f_x_minr,'*b') ;hold on;
 
 %RBF interpolation
-rbf = RBF(x, z', 'thinplate', derives, xAditional);
+rbf = RBF(x, z', 'thinplate');
 Z = rbf.Interpolate([X(:)'; Y(:)']);
 Z = reshape(Z, size(X));
 
-subplot(1,3,2); mesh(X,Y,Z), hold
-plot3(x(1,:), x(2,:), z,'*r'), hold off; title('RBF interpolation'); hold on; 
-plot3(xAditional(1,:), xAditional(2,:), zAditional,'*b');hold on;
-subplot(1,3,3); mesh(X,Y,abs(Z - F));  title('Error');
+ subplot(1,3,2); mesh(X,Y,Z), hold
+ plot3(x(1,:), x(2,:), z,'*r'), hold off; title('RBF interpolation'); hold on; 
+ plot3(xAditional(1,:), xAditional(2,:), zAditional,'*b');hold on;
+ subplot(1,3,3); mesh(X,Y,abs(Z - F));  title('Error');
 
 
 

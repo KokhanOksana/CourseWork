@@ -1,12 +1,6 @@
 classdef Rozenbrock
-    properties
-        funcCallCount;
-        derivCallCount;
-    end
     methods
         function obj = Rozenbrock()
-            obj.funcCallCount  = 0;
-            obj.derivCallCount = 0;
         end
         
         function z = Func(obj,x)
